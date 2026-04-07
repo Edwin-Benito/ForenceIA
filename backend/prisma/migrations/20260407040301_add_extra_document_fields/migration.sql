@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Audit" ADD COLUMN "birthDate" TEXT;
+ALTER TABLE "Audit" ADD COLUMN "electionKey" TEXT;
+ALTER TABLE "Audit" ADD COLUMN "expiryDate" TEXT;
+ALTER TABLE "Audit" ADD COLUMN "issuedDate" TEXT;
+ALTER TABLE "Audit" ADD COLUMN "sex" TEXT DEFAULT 'N/A';
+ALTER TABLE "Audit" ADD COLUMN "state" TEXT;

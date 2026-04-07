@@ -1,0 +1,41 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Audit {
+  id                 String   @id @default(cuid())
+  createdAt          DateTime @default(now())
+  fullName           String
+  documentId         String
+  curp               String?
+  birthDate          String?
+  sex                String?  @default("N/A")
+  electionKey        String?
+  state              String?
+  issuedDate         String?
+  expiryDate         String?
+  faceConfidence     Float
+  isDigitallyAltered Boolean
+  isSpecimen         Boolean
+  verdictStatus      String
+  verdictMessage     String
+  documentOrigin     String   @default("OFICIAL")
+  engineVersion      String
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  createdAt        DateTime  @default(now())
+  userId           String
+  status           String    @default("ACTIVE")
+  documentId       String?
+  verificationData String?
+  expiresAt        DateTime
+  completedAt      DateTime?
+  result           String?
+  notes            String?
+}

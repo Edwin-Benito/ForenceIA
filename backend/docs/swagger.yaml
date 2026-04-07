@@ -1,0 +1,852 @@
+openapi: 3.0.3
+info:
+  title: ForenseID API
+  version: 1.0.0
+  description: |
+    🛡️ **ForenseID** - Sistema Profesional de Análisis Forense de Identidad
+    
+    Validación e inteligencia artificial para documentos de identidad mexicanos e internacionales.
+    
+    ## Características
+    - 🔍 **OCR Avanzado**: Extracción de datos de INE, Pasaportes, Cédulas
+    - 🤖 **Detección de Alteraciones**: Análisis EXIF, metadatos, patrones digitales
+    - 👤 **Biometría Facial**: Detección de rostro y confianza de reconocimiento
+    - ✅ **Validación de CURP/RFC**: Validación matemática de dígitos verificadores
+    - 🌐 **Cross-Validation**: Coincidencia de datos entre múltiples fuentes
+    
+    ## Autenticación
+    Usa tu **API Key** en uno de estos formatos:
+    ```
+    Authorization: Bearer your_api_key_here
+    ?api_key=your_api_key_here
+    {"api_key": "your_api_key_here"}
+    ```
+    
+    **Demo Key**: `forenseid_demo_key_2026`
+  
+  contact:
+    name: Soporte ForenseID
+    email: support@forenseid.mx
+    url: https://forenseid.mx
+  
+  license:
+    name: Proprietary
+    url: https://forenseid.mx/license
+
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Desarrollo Local
+  - url: https://forenseid-api.vercel.app/api/v1
+    description: Producción (Vercel)
+
+tags:
+  - name: Autenticación
+    description: Gestión de API Keys y tokens
+  - name: Documentos
+    description: Análisis de documentos de identidad
+  - name: Sesiones
+    description: Gestión de sesiones de verificación
+  - name: Auditoría
+    description: Historial y reportes de análisis
+  - name: Recursos
+    description: Catálogos y tablas de referencia
+  - name: Health
+    description: Estado del servidor
+  - name: Health
+    description: Estado del servidor
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verificar estado del servidor
+      description: Endpoint público para monitoreo
+      operationId: getHealth
+      responses:
+        '200':
+          description: Servidor activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /documents/analyze:
+    post:
+      tags:
+        - Documentos
+      summary: Analizar documento de identidad
+      description: |
+        Envía una imagen de documento (INE, Pasaporte, Cédula) para análisis forense.
+        
+        **Validaciones incluidas:**
+        - OCR con Google Cloud Document AI
+        - Detección de alteraciones digitales (EXIF)
+        - Validación de CURP/RFC
+        - Análisis de biometría facial
+        - Detección de espécimen/muestra
+        
+        **Nota**: Requiere API Key válida
+      operationId: analyzeDocument
+      security:
+        - BearerAuth: []
+        - ApiKeyQuery: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: Imagen del documento (JPEG, PNG, max 5MB)
+              required:
+                - document
+      responses:
+        '200':
+          description: Análisis completado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: DOCUMENT_ANALYZED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DocumentAnalysis'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /audits:
+    get:
+      tags:
+        - Auditoría
+      summary: Listar historial de análisis
+      description: Obtener registro de todos los documentos analizados con filtros
+      operationId: listAudits
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          description: Filtrar por veredicto
+          schema:
+            type: string
+            enum: [VERDADERO, FALSO]
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Registros de auditoría
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditRecord'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /audits/{id}:
+    get:
+      tags:
+        - Auditoría
+      summary: Obtener detalles de análisis
+      description: Obtener reporte detallado de un análisis específico
+      operationId: getAuditDetail
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalles del análisis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/AuditRecord'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /sessions:
+    post:
+      tags:
+        - Sesiones
+      summary: Crear nueva sesión de verificación
+      description: Inicia una nueva sesión de verificación de identidad
+      operationId: createSession
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  example: "user_12345"
+                durationMinutes:
+                  type: integer
+                  example: 30
+              required:
+                - userId
+      responses:
+        '201':
+          description: Sesión creada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: "SESSION_CREATED"
+                  data:
+                    $ref: '#/components/schemas/SessionRecord'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    get:
+      tags:
+        - Sesiones
+      summary: Listar sesiones
+      description: Obtener lista de sesiones con filtros opcionales
+      operationId: listSessions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, COMPLETED, EXPIRED, CANCELLED]
+      responses:
+        '200':
+          description: Lista de sesiones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionRecord'
+                  details:
+                    type: object
+                    properties:
+                      pagination:
+                        type: object
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /sessions/{id}:
+    get:
+      tags:
+        - Sesiones
+      summary: Obtener detalles de sesión
+      description: Obtener información detallada de una sesión específica
+      operationId: getSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalles de la sesión
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/SessionRecord'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    put:
+      tags:
+        - Sesiones
+      summary: Actualizar sesión
+      description: Actualizar estado y datos de una sesión
+      operationId: updateSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [ACTIVE, COMPLETED, EXPIRED, CANCELLED]
+                documentId:
+                  type: string
+                result:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Sesión actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/SessionRecord'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    delete:
+      tags:
+        - Sesiones
+      summary: Cancelar sesión
+      description: Cancela una sesión existente
+      operationId: deleteSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sesión cancelada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /resources/states:
+    get:
+      tags:
+        - Recursos
+      summary: Estados mexicanos
+      description: Obtener lista de estados mexicanos con códigos de entidad federativa
+      operationId: getStates
+      responses:
+        '200':
+          description: Lista de estados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: STATES_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: "CDMX"
+                        name:
+                          type: string
+                          example: "Ciudad de México"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /resources/document-types:
+    get:
+      tags:
+        - Recursos
+      summary: Tipos de documentos
+      description: Obtener lista de tipos de documentos de identidad válidos
+      operationId: getDocumentTypes
+      responses:
+        '200':
+          description: Lista de tipos de documentos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: DOCUMENT_TYPES_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: "INE"
+                        name:
+                          type: string
+                          example: "Cédula de Identidad (INE)"
+                        country:
+                          type: string
+                          example: "México"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /resources/verdicts:
+    get:
+      tags:
+        - Recursos
+      summary: Estados de veredicto
+      description: Obtener lista de posibles estados de veredicto en análisis forense
+      operationId: getVerdicts
+      responses:
+        '200':
+          description: Lista de veredictos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: VERDICTS_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: "VERDADERO"
+                        label:
+                          type: string
+                          example: "Documento Auténtico"
+                        color:
+                          type: string
+                          example: "emerald"
+                        description:
+                          type: string
+                          example: "El documento pasó todas las validaciones"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /resources/error-codes:
+    get:
+      tags:
+        - Recursos
+      summary: Diccionario de códigos de error
+      description: |
+        Referencia completa de todos los códigos de error posibles.
+        
+        **Parámetros opcionales:**
+        - `?category=authentication` - Errores de autenticación
+        - `?category=validation` - Errores de validación
+        - `?category=processing` - Errores de procesamiento
+        - `?category=database` - Errores de base de datos
+        - `?category=resource` - Errores de recurso
+        - `?category=rate-limit` - Errores de límite de solicitudes
+      operationId: getErrorCodes
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [authentication, validation, processing, database, resource, rate-limit]
+      responses:
+        '200':
+          description: Lista de códigos de error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: ERROR_CODES_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: "AUTH_001"
+                        message:
+                          type: string
+                          example: "API Key inválida o expirada"
+                        statusCode:
+                          type: integer
+                          example: 401
+                        category:
+                          type: string
+                          example: "authentication"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API Key como Bearer token
+    ApiKeyQuery:
+      type: apiKey
+      in: query
+      name: api_key
+      description: API Key como parámetro de query
+
+  schemas:
+    DocumentAnalysis:
+      type: object
+      properties:
+        fullName:
+          type: string
+          example: "CASTELLÓ HERNÁNDEZ CERÓN BUENO"
+        documentId:
+          type: string
+          example: "CAHE690427H"
+        curp:
+          type: string
+          example: "CAHE690427HDFRRCN06"
+        birthDate:
+          type: string
+          format: date
+          example: "27/04/1969"
+        sex:
+          type: string
+          enum: [H, M, "N/A"]
+          example: "H"
+        electionKey:
+          type: string
+          example: "CAHE69042756A"
+        state:
+          type: string
+          example: "DURANGO"
+        issuedDate:
+          type: string
+          format: date
+          example: "12/04/2018"
+        expiryDate:
+          type: string
+          format: date
+          example: "12/04/2028"
+        faceConfidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.97
+        verdict:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [VERDADERO, FALSO]
+            message:
+              type: string
+            color:
+              type: string
+        documentOrigin:
+          type: string
+          example: "OFICIAL"
+        isDigitallyAltered:
+          type: boolean
+        isSpecimen:
+          type: boolean
+        engineVersion:
+          type: string
+          example: "ForenseID v7.6"
+
+    AuditRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        fullName:
+          type: string
+        documentId:
+          type: string
+        curp:
+          type: string
+        birthDate:
+          type: string
+        sex:
+          type: string
+        faceConfidence:
+          type: number
+        verdictStatus:
+          type: string
+        verdictMessage:
+          type: string
+        documentOrigin:
+          type: string
+        isSpecimen:
+          type: boolean
+        isDigitallyAltered:
+          type: boolean
+
+    SessionRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cmno3nqop0004f5w7kvknhenl"
+        createdAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+          example: "user_12345"
+        status:
+          type: string
+          enum: [ACTIVE, COMPLETED, EXPIRED, CANCELLED]
+          example: "ACTIVE"
+        documentId:
+          type: string
+          nullable: true
+        verificationData:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        result:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+  responses:
+    BadRequestError:
+      description: Solicitud inválida
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              code:
+                type: string
+                example: INVALID_REQUEST
+              message:
+                type: string
+              request_id:
+                type: string
+
+    UnauthorizedError:
+      description: Requiere autenticación válida
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              code:
+                type: string
+                example: INVALID_API_KEY
+              message:
+                type: string
+              request_id:
+                type: string
+
+    NotFoundError:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              code:
+                type: string
+                example: NOT_FOUND
+              message:
+                type: string
+              request_id:
+                type: string
+
+    ValidationError:
+      description: Error de validación
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [error]
+              code:
+                type: string
+                example: VALIDATION_ERROR
+              message:
+                type: string
+              details:
+                type: object
+              request_id:
+                type: string
