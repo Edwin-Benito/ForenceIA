@@ -11,6 +11,7 @@ export interface ApiResponse<T> {
   data?: T;
   details?: Record<string, any>;
   timestamp: string;
+  engine?: string;
 }
 
 export interface ApiError extends ApiResponse<null> {

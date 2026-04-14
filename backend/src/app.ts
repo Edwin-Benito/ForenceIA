@@ -10,7 +10,7 @@ import YAML from 'yaml';
 import auditRoutes from './routes/audit.routes.js';
 import sessionRoutes from './routes/session.routes.js';
 import resourceRoutes from './routes/resources.routes.js';
-import { analyzeIdentityDocument } from './services/document.service.js';
+import documentRoutes from './routes/document.routes.js';
 import { validateApiKey } from './middlewares/apiKeyValidator.js';
 import type { ApiResponse, ApiError } from './types/api.types.js';
 
@@ -51,50 +51,17 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Ruta de Análisis
-routerV1.post('/documents/analyze', upload.single('document'), async (req: Request, res: Response) => {
-  const requestId = (req as any).requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  try {
-    if (!req.file) {
-      const error: ApiError = {
-        status: 'error',
-        code: 'MISSING_DOCUMENT',
-        message: 'No se proporcionó archivo de documento.',
-        request_id: requestId,
-        timestamp: new Date().toISOString()
-      };
-      return res.status(400).json(error);
-    }
-
-    console.log(`📨 [${requestId}] Análisis de: ${req.file.originalname}`);
-    const analysis = await analyzeIdentityDocument(req.file.buffer);
-    
-    const response: ApiResponse<any> = {
-      status: 'success',
-      code: 'DOCUMENT_ANALYZED',
-      message: 'Documento analizado exitosamente',
-      request_id: requestId,
-      data: analysis,
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log(`✅ [${requestId}] Análisis completado`);
-    res.status(200).json(response);
-  } catch (error: any) {
-    console.error(`❌ [${requestId}] Error:`, error.message);
-    
-    const response: ApiError = {
-      status: 'error',
-      code: 'ANALYSIS_FAILED',
-      message: error.message || 'Error al analizar documento',
-      request_id: requestId,
-      timestamp: new Date().toISOString()
-    };
-    
-    res.status(500).json(response);
-  }
+// Health check endpoint en API v1 (sin autenticación)
+app.get('/api/v1/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
 });
+
+// Rutas de Documentos (analyze / analyze-free / analyze-advanced / analyze-unified)
+routerV1.use('/documents', documentRoutes);
 
 // Ruta de Historial
 routerV1.use('/audits', auditRoutes);

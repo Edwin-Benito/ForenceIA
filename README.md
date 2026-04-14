@@ -1,263 +1,203 @@
-# 🛡️ ForenseID - Sistema Profesional de Análisis Forense de Identidad
+# 🛡️ ForenseID
 
-> **Validación e inteligencia artificial para documentos de identidad mexicanos e internacionales**
+ForenseID es una solución full‑stack para **análisis forense de documentos de identidad** (INE México y pasaportes) con:
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-Proprietary-red)
-![Node](https://img.shields.io/badge/node-20.x-green)
-![Vue](https://img.shields.io/badge/Vue-3-green)
+- OCR (Tesseract.js) con preprocesamiento y extracción robusta
+- Biometría facial (Face‑API) opcional
+- Integridad digital (EXIF / señales de manipulación)
+- Etapa Google Cloud (Document AI + Vision) **opcional**
+- Auditoría persistente en SQLite (Prisma)
 
-## 📋 Características
+El frontend muestra **solo 2 modos**:
 
-- 🔍 **OCR Avanzado** - Extracción de datos usando Google Cloud Document AI
-- 🤖 **Detección de Alteraciones** - Análisis EXIF, metadatos, patrones digitales
-- 👤 **Biometría Facial** - Detección de rostro y análisis de confianza
-- ✅ **Validación de CURP/RFC** - Validación matemática de dígitos verificadores
-- 🌐 **Cross-Validation** - Coincidencia de datos entre múltiples fuentes
-- 📊 **API REST Completa** - Endpoints documentados con Swagger/OpenAPI
-- 🎮 **Live Playground** - Interfaz interactiva para probar endpoints
-- 📱 **Responsive Design** - Funciona en desktop, tablet y móvil
+1) **UNIFICADO GRATIS**: OCR + Face (y Google Cloud solo si está configurado)
+2) **Google Cloud (AI Avanzado)**: solo la etapa Cloud
 
-## 🚀 Quick Start
+Nota: el frontend está simplificado para **subir una imagen** (sin cámara integrada).
 
-### Prerequisitos
-- Node.js 20.x
-- npm 10.x
-- SQLite3 (incluido en el proyecto)
-- Google Cloud Account (para OCR y Vision)
+## ✅ Requisitos
 
-### Instalación Local
+- Node.js 20.x (recomendado por la config de Vercel)
+- npm
+
+## 🚀 Inicio rápido (Local)
+
+### 1) Backend
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/yourusername/forenseid.git
-cd forenseid
-
-# 2. Backend Setup
 cd backend
-cp .env.example .env
-# Editar .env con tus credenciales de Google Cloud
 npm install
+
+# (opcional pero recomendado) descargar modelos de Face-API
+npm run download:face-models
+
+# Prisma (SQLite)
 npx prisma generate
 npx prisma migrate dev
-npm run dev
 
-# 3. Frontend Setup (en otra terminal)
-cd ../frontend
-cp .env.example .env
+# levantar API
+npm run dev
+```
+
+API disponible en:
+
+- http://localhost:4000/api/v1
+- Swagger UI: http://localhost:4000/api-docs
+
+### 2) Frontend
+
+```bash
+cd frontend
 npm install
 npm run dev
-
-# 4. Acceder
-- API: http://localhost:4000
-- API Docs: http://localhost:4000/api-docs
-- Frontend: http://localhost:5173
-- Playground: http://localhost:5173 → API Playground
 ```
 
-## 📚 Documentación
+Frontend en:
 
-### Estructura del Proyecto
+- http://localhost:5173
 
-```
-forenseid/
-├── backend/
-│   ├── src/
-│   │   ├── app.ts                 # Aplicación Express principal
-│   │   ├── controllers/           # Lógica de controladores
-│   │   │   ├── document.controller.ts
-│   │   │   ├── session.controller.ts
-│   │   │   ├── resources.controller.ts
-│   │   │   └── audit.controller.ts
-│   │   ├── routes/                # Definición de rutas
-│   │   ├── services/              # Lógica de negocio
-│   │   ├── types/                 # Tipos TypeScript
-│   │   ├── utils/                 # Utilidades
-│   │   ├── lib/                   # Librerías (Prisma, recursos)
-│   │   └── middlewares/           # Middlewares Express
-│   ├── prisma/
-│   │   ├── schema.prisma          # Esquema de BD
-│   │   └── migrations/            # Migraciones
-│   ├── docs/
-│   │   └── swagger.yaml           # OpenAPI/Swagger spec
-│   └── package.json
-│
-├── frontend/
-│   ├── src/
-│   │   ├── App.vue                # Componente raíz
-│   │   ├── components/
-│   │   │   ├── DocumentScanner.vue
-│   │   │   └── APIPlayground.vue
-│   │   ├── main.ts
-│   │   └── style.css
-│   └── package.json
-│
-├── .github/
-│   └── workflows/
-│       └── deploy.yml             # GitHub Actions CI/CD
-│
-├── vercel.json                    # Configuración Vercel
-└── README.md
+## 🔐 Autenticación (API Key)
+
+Las rutas bajo `/api/v1` (excepto `/api/v1/health` y `/api/v1/resources/*`) usan `validateApiKey`.
+
+Puedes enviar la API key de cualquiera de estas formas:
+
+- Header: `X-API-Key: <key>` (usado por el frontend)
+- Header: `Authorization: Bearer <key>`
+- Query: `?api_key=<key>`
+- Body JSON: `{ "api_key": "<key>" }`
+
+Key demo por defecto:
+
+```text
+forenseid_demo_key_2026
 ```
 
-### API Endpoints
+## 🧪 Endpoints principales
 
-#### Recursos (sin autenticación)
-```
-GET  /api/v1/resources/states           → Estados mexicanos
-GET  /api/v1/resources/document-types   → Tipos de documentos
-GET  /api/v1/resources/verdicts         → Estados de veredicto
-GET  /api/v1/resources/error-codes      → Códigos de error
-```
+Base local: `http://localhost:4000`
 
-#### Sesiones (requiere API Key)
-```
-POST /api/v1/sessions                   → Crear sesión
-GET  /api/v1/sessions                   → Listar sesiones (con paginación)
-GET  /api/v1/sessions/{id}              → Obtener sesión
-PUT  /api/v1/sessions/{id}              → Actualizar sesión
-DELETE /api/v1/sessions/{id}            → Cancelar sesión
-```
+### Health
 
-#### Documentos (requiere API Key)
-```
-POST /api/v1/documents/analyze          → Analizar documento (multipart/form-data)
-```
+- `GET /health` (sin auth)
+- `GET /api/v1/health` (sin auth)
 
-#### Auditoría (requiere API Key)
-```
-GET  /api/v1/audits                     → Historial de análisis
-GET  /api/v1/audits/{id}                → Detalles de análisis
-```
+### Documentos (multipart/form-data, field = `document`, máx 5MB)
 
-#### Health
-```
-GET  /health                            → Estado del servidor (sin auth)
-```
+- `POST /api/v1/documents/analyze-unified` (recomendado)
+  - Ejecuta OCR + Face‑API + Cloud (si está configurado) en una sola llamada.
+  - Si Cloud falla por credenciales, el request **no se cae**: el stage `cloud` queda como error y el resto continúa.
 
-### Autenticación
+- `POST /api/v1/documents/analyze` (Google Cloud)
+  - Requiere configuración GCP (sin fallback simulado).
 
-La API soporta 3 métodos de autenticación:
+Endpoints adicionales (útiles para debug):
 
-**1. Bearer Token (recomendado)**
-```bash
-curl -H "Authorization: Bearer forenseid_demo_key_2026" \
-  http://localhost:4000/api/v1/sessions
-```
+- `POST /api/v1/documents/analyze-free` (solo OCR Tesseract)
+- `POST /api/v1/documents/analyze-advanced` (OCR + Face‑API + Cloudinary)
 
-**2. Query Parameter**
-```bash
-curl "http://localhost:4000/api/v1/sessions?api_key=forenseid_demo_key_2026"
-```
+### Auditorías (SQLite)
 
-**3. Body JSON**
+- `GET /api/v1/audits`
+
+## 🧾 Ejemplos con curl
+
+### Análisis unificado (recomendado)
+
 ```bash
 curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"api_key": "forenseid_demo_key_2026", "userId": "user_123"}' \
-  http://localhost:4000/api/v1/sessions
+  -H "X-API-Key: forenseid_demo_key_2026" \
+  -F "document=@/ruta/imagen.jpg" \
+  http://localhost:4000/api/v1/documents/analyze-unified
 ```
 
-### Ejemplos de Uso
+### Google Cloud
 
-#### Crear Sesión
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer forenseid_demo_key_2026" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": "user_123",
-    "durationMinutes": 30
-  }' \
-  http://localhost:4000/api/v1/sessions
-```
-
-#### Analizar Documento
-```bash
-curl -X POST \
-  -H "Authorization: Bearer forenseid_demo_key_2026" \
-  -F "document=@/path/to/document.jpg" \
+  -H "X-API-Key: forenseid_demo_key_2026" \
+  -F "document=@/ruta/imagen.jpg" \
   http://localhost:4000/api/v1/documents/analyze
 ```
 
-#### Listar Estados Mexicanos
-```bash
-curl http://localhost:4000/api/v1/resources/states | jq '.'
-```
+## 🧩 Respuesta (forma general)
 
-## 🔧 Configuración
+Las respuestas siguen un “envelope” consistente.
 
-### Variables de Entorno
+Éxito:
 
-#### Backend (.env)
-```env
-# Database
-DATABASE_URL=file:./prisma/dev.db
-
-# Google Cloud
-GCP_PROJECT_ID=your_project_id
-GCP_LOCATION=us
-GCP_PROCESSOR_ID=your_processor_id
-
-# Server
-PORT=4000
-NODE_ENV=production
-
-# API Keys
-API_KEY_DEMO=forenseid_demo_key_2026
-```
-
-#### Frontend (.env)
-```env
-VITE_API_URL=https://forenseid-api.vercel.app/api/v1
-VITE_APP_NAME=ForenseID
-VITE_APP_VERSION=1.0.0
-```
-
-## 🚀 Deployment
-
-### Vercel (Recomendado)
-
-1. **Conectar repositorio a Vercel**
-   ```bash
-   vercel link
-   ```
-
-2. **Configurar variables de entorno**
-   - Ve a Vercel Dashboard → Project Settings → Environment Variables
-   - Agrega todas las variables de `.env.example`
-
-3. **Deploy automático**
-   - Cada push a `main` despliega automáticamente
-   - GitHub Actions ejecuta tests primero
-
-4. **URLs de Producción**
-   - API: `https://forenseid-api.vercel.app/api/v1`
-   - Frontend: `https://forenseid.vercel.app`
-   - Docs: `https://forenseid-api.vercel.app/api-docs`
-
-### Manual Deploy
-
-```bash
-# 1. Build
-cd backend && npm run build
-cd ../frontend && npm run build
-
-# 2. Deploy con Vercel CLI
-vercel --prod
-
-# 3. Ver logs
-vercel logs
-```
-
-## 📊 Modelos de Base de Datos
-
-### Session
-```typescript
+```json
 {
-  id: string (CUID)
-  createdAt: DateTime
-  userId: string
+  "status": "success",
+  "code": "...",
+  "message": "...",
+  "request_id": "req_...",
+  "data": { },
+  "timestamp": "2026-...",
+  "reportToken": "..."
+}
+```
+
+Error:
+
+```json
+{
+  "status": "error",
+  "code": "...",
+  "message": "...",
+  "request_id": "req_...",
+  "timestamp": "2026-..."
+}
+```
+
+## ⚙️ Variables de entorno (backend)
+
+Crea `backend/.env` (mínimo recomendado):
+
+```env
+PORT=4000
+JWT_SECRET=dev_secret_change_me
+
+# API key (si no se define, queda habilitada la demo)
+API_KEY=forenseid_demo_key_2026
+
+# (opcional) Override de SQLite
+# DATABASE_URL=/ruta/absoluta/a/dev.db
+```
+
+### Google Cloud (opcional)
+
+Para habilitar `POST /api/v1/documents/analyze` (y el stage cloud del unificado):
+
+```env
+GOOGLE_APPLICATION_CREDENTIALS=/ruta/a/forenseid-xxxxx.json
+GCP_PROJECT_ID=...
+GCP_LOCATION=us
+GCP_PROCESSOR_ID=...
+```
+
+## ☁️ Deploy en Vercel
+
+El repo incluye `vercel.json` con build de backend + frontend.
+
+En producción, los endpoints quedan bajo:
+
+- `https://<tu-app>.vercel.app/api/v1/...`
+- `https://<tu-app>.vercel.app/api-docs`
+
+Configura en Vercel (Environment Variables) al menos:
+
+- `JWT_SECRET`
+- `API_KEY`
+- (si usas GCP) `GOOGLE_APPLICATION_CREDENTIALS`, `GCP_PROJECT_ID`, `GCP_LOCATION`, `GCP_PROCESSOR_ID`
+
+## 📁 Estructura del proyecto
+
+```text
+.
+├── backend/   # Express + TypeScript + Prisma (SQLite)
+└── frontend/  # Vue 3 + Vite
+```
   status: "ACTIVE" | "COMPLETED" | "EXPIRED" | "CANCELLED"
   documentId?: string
   verificationData?: string

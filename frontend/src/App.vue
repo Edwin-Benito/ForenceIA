@@ -6,36 +6,17 @@
           <h1>🛡️ ForenseID</h1>
           <p>Sistema de Validación de Identidad</p>
         </div>
-        <nav class="flex gap-4">
-          <button
-            @click="currentView = 'scanner'"
-            :class="['nav-btn', currentView === 'scanner' && 'active']"
-          >
-            📸 Scanner
-          </button>
-          <button
-            @click="currentView = 'playground'"
-            :class="['nav-btn', currentView === 'playground' && 'active']"
-          >
-            🎮 API Playground
-          </button>
-        </nav>
       </div>
     </header>
 
     <main>
-      <DocumentScanner v-if="currentView === 'scanner'" />
-      <APIPlayground v-else-if="currentView === 'playground'" />
+      <DocumentScanner />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import DocumentScanner from './components/DocumentScanner.vue';
-import APIPlayground from './components/APIPlayground.vue';
-
-const currentView = ref<string>('playground');
 </script>
 
 <style scoped>
@@ -79,27 +60,6 @@ const currentView = ref<string>('playground');
 
 .gap-4 {
   gap: 1rem;
-}
-
-.nav-btn {
-  padding: 0.5rem 1rem;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.nav-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.nav-btn.active {
-  background-color: #00ff88;
-  color: #1a1a2e;
-  border-color: #00ff88;
 }
 
 main {

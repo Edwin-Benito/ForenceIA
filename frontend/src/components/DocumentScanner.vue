@@ -12,7 +12,7 @@
           :class="activeTab === 'scanner' ? 'bg-white shadow-md text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-700'"
           class="px-8 py-2.5 rounded-xl font-bold transition-all duration-300 flex items-center gap-2"
         >
-          📷 Escáner
+          📄 Análisis
         </button>
         <button 
           @click="setTab('history')" 
@@ -26,6 +26,31 @@
 
     <div v-if="activeTab === 'scanner'" class="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-in fade-in duration-500">
       
+      <!-- SELECTOR DE MODO DE ANÁLISIS -->
+      <div class="col-span-full">
+        <div class="bg-gradient-to-r from-slate-100 to-slate-50 p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">⚙️ Selecciona modo de análisis:</p>
+          <div class="flex flex-col lg:flex-row gap-3">
+            <button 
+              @click="analysisMode = 'unified'"
+              :class="analysisMode === 'unified' ? 'ring-2 ring-slate-800 bg-slate-100 text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'"
+              class="flex-1 p-4 rounded-xl border-2 border-slate-200 font-bold text-sm transition-all"
+            >
+              🧩 UNIFICADO GRATIS
+              <div class="text-xs font-normal text-slate-500 mt-1">OCR + Face (y Cloud si está configurado)</div>
+            </button>
+            <button 
+              @click="analysisMode = 'cloud'"
+              :class="analysisMode === 'cloud' ? 'ring-2 ring-blue-500 bg-blue-50 text-blue-900' : 'bg-white text-slate-600 hover:bg-slate-50'"
+              class="flex-1 p-4 rounded-xl border-2 border-blue-200 font-bold text-sm transition-all"
+            >
+              ☁️ Google Cloud (AI Avanzado)
+              <div class="text-xs font-normal text-slate-500 mt-1">Solo datos reales (sin simulación)</div>
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <div class="space-y-6">
         <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200">
           <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-slate-700">
@@ -34,33 +59,21 @@
           </h2>
 
           <div class="flex gap-3 mb-6">
-            <button v-if="!isCameraOpen" @click="startCamera" class="flex-1 bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 active:scale-95 transition-all">
-              📷 Iniciar Cámara
-            </button>
-            <button v-else @click="stopCamera" class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition-all">
-              ✖ Detener
-            </button>
             <label class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-center cursor-pointer hover:bg-slate-200 transition-all border border-slate-200">
-              📁 Subir Archivo
+              📁 Subir imagen
               <input type="file" accept="image/*" @change="handleFileUpload" class="hidden" />
             </label>
           </div>
 
           <div class="relative bg-slate-950 rounded-2xl overflow-hidden aspect-[4/3] shadow-inner border-4 border-slate-200">
-            <video v-if="isCameraOpen && !photoPreview" ref="videoElement" autoplay playsinline class="w-full h-full object-cover"></video>
             <img v-if="photoPreview" :src="photoPreview" class="w-full h-full object-contain" />
-            
-            <div v-if="isCameraOpen && !photoPreview" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div class="w-3/4 h-1/2 border-2 border-emerald-400/40 rounded-3xl animate-pulse shadow-[0_0_40px_rgba(52,211,153,0.1)]"></div>
+            <div v-else class="absolute inset-0 flex items-center justify-center">
+              <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Selecciona una imagen para analizar</p>
             </div>
-
-            <button v-if="isCameraOpen && !photoPreview" @click="takePhoto" class="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-slate-300 flex items-center justify-center active:scale-90 transition-all shadow-2xl">
-              <div class="w-12 h-12 bg-red-500 rounded-full"></div>
-            </button>
           </div>
 
           <div v-if="photoPreview" class="mt-6 flex gap-4">
-            <button @click="retakePhoto" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all">🔄 Repetir</button>
+            <button @click="clearFile" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all">🧹 Quitar</button>
             <button @click="sendToBackend" :disabled="isAnalyzing" class="flex-1 py-4 bg-emerald-600 text-white rounded-xl font-black text-lg hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-lg shadow-emerald-100 uppercase tracking-wider">
               {{ isAnalyzing ? 'Analizando...' : 'Iniciar Auditoría' }}
             </button>
@@ -80,8 +93,12 @@
         </div>
 
         <div v-else-if="analysisResult" class="space-y-6">
-          <div :class="analysisResult.forensicAnalysis.verdict.color === 'emerald' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' : 'bg-red-50 border-red-500 text-red-900'" class="p-5 rounded-2xl border-l-8 shadow-sm flex items-start gap-4">
-            <span class="text-4xl">{{ analysisResult.forensicAnalysis.verdict.status === 'VERDADERO' ? '🛡️' : '🚫' }}</span>
+          <div :class="analysisResult.forensicAnalysis.verdict.color === 'emerald'
+              ? 'bg-emerald-50 border-emerald-500 text-emerald-900'
+              : (analysisResult.forensicAnalysis.verdict.color === 'amber'
+                ? 'bg-amber-50 border-amber-500 text-amber-900'
+                : 'bg-red-50 border-red-500 text-red-900')" class="p-5 rounded-2xl border-l-8 shadow-sm flex items-start gap-4">
+            <span class="text-4xl">{{ analysisResult.forensicAnalysis.verdict.status === 'VERDADERO' ? '🛡️' : (analysisResult.forensicAnalysis.verdict.status === 'SOSPECHOSO' ? '⚠️' : '🚫') }}</span>
             <div>
               <p class="font-black text-xl uppercase tracking-tight">Documento {{ analysisResult.forensicAnalysis.verdict.status }}</p>
               <p class="text-sm font-medium opacity-80">{{ analysisResult.forensicAnalysis.verdict.message }}</p>
@@ -165,27 +182,23 @@
       </div>
     </div>
 
-    <canvas ref="canvasElement" class="hidden"></canvas>
   </div>
 </template>
 
 <script setup lang="ts">
 // @ts-nocheck
-import { ref, onBeforeUnmount } from 'vue';
+import { ref } from 'vue';
 import axios from 'axios';
 
 // ESTADOS GENERALES
 const activeTab = ref('scanner');
+const analysisMode = ref('unified'); // unified | cloud
 
 // ESTADOS DEL ESCÁNER
-const videoElement = ref<HTMLVideoElement | null>(null);
-const canvasElement = ref<HTMLCanvasElement | null>(null);
-const isCameraOpen = ref(false);
 const photoPreview = ref<string | null>(null);
 const imageBlob = ref<Blob | null>(null);
 const isAnalyzing = ref(false);
 const analysisResult = ref<any>(null);
-let mediaStream: MediaStream | null = null;
 
 // ESTADOS DEL HISTORIAL
 const auditHistory = ref([]);
@@ -201,7 +214,12 @@ const setTab = (tab) => {
 const fetchHistory = async () => {
   isLoadingHistory.value = true;
   try {
-    const response = await axios.get('http://localhost:4000/api/v1/audits');
+    const apiKey = localStorage.getItem('forenseid_api_key') || 'forenseid_demo_key_2026';
+    const response = await axios.get('http://localhost:4000/api/v1/audits', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
     auditHistory.value = response.data.data;
   } catch (error) {
     console.error("Error al consultar la DB:", error);
@@ -210,51 +228,18 @@ const fetchHistory = async () => {
   }
 };
 
-// LÓGICA DE CÁMARA
-const startCamera = async () => {
-  try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-    });
-    isCameraOpen.value = true;
-    photoPreview.value = null;
-    analysisResult.value = null;
-    setTimeout(() => { if (videoElement.value) videoElement.value.srcObject = mediaStream; }, 100);
-  } catch (error) {
-    alert("Error al acceder a la cámara.");
-  }
-};
-
-const stopCamera = () => {
-  if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
-  isCameraOpen.value = false;
-};
-
-const takePhoto = () => {
-  const canvas = canvasElement.value;
-  const video = videoElement.value;
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  photoPreview.value = canvas.toDataURL('image/jpeg', 0.9);
-  canvas.toBlob(blob => { imageBlob.value = blob; }, 'image/jpeg', 0.9);
-  stopCamera();
-};
-
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (!file) return;
   imageBlob.value = file;
   photoPreview.value = URL.createObjectURL(file);
   analysisResult.value = null;
-  stopCamera();
 };
 
-const retakePhoto = () => {
+const clearFile = () => {
   photoPreview.value = null;
   imageBlob.value = null;
   analysisResult.value = null;
-  startCamera();
 };
 
 // COMUNICACIÓN CON BACKEND
@@ -267,7 +252,21 @@ const sendToBackend = async () => {
   formData.append('document', imageBlob.value, 'evidencia.jpg');
 
   try {
-    const response = await axios.post('http://localhost:4000/api/v1/documents/analyze', formData);
+    const apiKey = localStorage.getItem('forenseid_api_key') || 'forenseid_demo_key_2026';
+    
+    // Seleccionar endpoint según modo
+    let endpoint;
+    if (analysisMode.value === 'unified') {
+      endpoint = 'http://localhost:4000/api/v1/documents/analyze-unified';
+    } else {
+      endpoint = 'http://localhost:4000/api/v1/documents/analyze';
+    }
+    
+    const response = await axios.post(endpoint, formData, {
+      headers: {
+        'X-API-Key': apiKey
+      }
+    });
     analysisResult.value = response.data.data;
     // Si el análisis fue exitoso, refrescamos el historial en segundo plano
     fetchHistory();
@@ -277,8 +276,6 @@ const sendToBackend = async () => {
     isAnalyzing.value = false;
   }
 };
-
-onBeforeUnmount(() => stopCamera());
 </script>
 
 <style scoped>

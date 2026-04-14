@@ -1,30 +1,31 @@
 import type { Request, Response } from 'express';
-import { analyzeIdentityDocument } from '../services/document.service.js';
 import jwt from 'jsonwebtoken';
+import { analyzeUnifiedDocument } from '../services/unified-analysis.service.js';
 import { generateRequestId } from '../middlewares/apiKeyValidator.js';
 
-export const analyzeDocument = async (req: Request, res: Response) => {
+export const analyzeDocumentUnified = async (req: Request, res: Response) => {
   try {
     const requestId = (req as any).requestId || generateRequestId();
+
     if (!req.file) {
       res.status(400).json({
         status: 'error',
-        code: 'MISSING_DOCUMENT',
-        message: 'No se proporcionó archivo de documento.',
+        code: 'NO_FILE',
+        message: 'No se subió ningún documento.',
         request_id: requestId,
         timestamp: new Date().toISOString()
       });
       return;
     }
 
-    const analysis = await analyzeIdentityDocument(req.file.buffer, { allowSimulatedFallback: false });
+    const analysis = await analyzeUnifiedDocument(req.file.buffer);
 
-    // Firma del reporte (Calidad Factus)
     const reportToken = jwt.sign(
-      { 
-        sub: "forensic_report",
+      {
+        sub: 'forensic_report',
         data: analysis.personalInfo,
-        security: analysis.forensicAnalysis 
+        security: analysis.forensicAnalysis,
+        engine: analysis.engine
       },
       process.env.JWT_SECRET as string,
       { expiresIn: '1h' }
@@ -32,19 +33,20 @@ export const analyzeDocument = async (req: Request, res: Response) => {
 
     res.status(200).json({
       status: 'success',
-      code: 'DOCUMENT_ANALYZED',
-      message: 'Documento analizado exitosamente',
+      code: 'UNIFIED_ANALYSIS_COMPLETE',
+      message: 'Análisis unificado completado',
+      engine: analysis.engine,
       request_id: requestId,
       data: analysis,
       timestamp: new Date().toISOString(),
       reportToken
     });
-
   } catch (error: any) {
     res.status(500).json({
       status: 'error',
-      code: 'INTERNAL_AI_ERROR',
-      message: 'Falla en el motor forense: ' + error.message,
+      code: 'UNIFIED_ANALYSIS_ERROR',
+      message: 'Error en análisis unificado: ' + error.message,
+      engine: 'Unified',
       request_id: (req as any).requestId || generateRequestId(),
       timestamp: new Date().toISOString()
     });

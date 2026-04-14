@@ -17,6 +17,7 @@ info:
     ## Autenticación
     Usa tu **API Key** en uno de estos formatos:
     ```
+    X-API-Key: your_api_key_here
     Authorization: Bearer your_api_key_here
     ?api_key=your_api_key_here
     {"api_key": "your_api_key_here"}
@@ -50,8 +51,6 @@ tags:
     description: Historial y reportes de análisis
   - name: Recursos
     description: Catálogos y tablas de referencia
-  - name: Health
-    description: Estado del servidor
   - name: Health
     description: Estado del servidor
 
@@ -99,6 +98,7 @@ paths:
         **Nota**: Requiere API Key válida
       operationId: analyzeDocument
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
         - ApiKeyQuery: []
       requestBody:
@@ -134,12 +134,197 @@ paths:
                     type: string
                   data:
                     $ref: '#/components/schemas/DocumentAnalysis'
+                  timestamp:
+                    type: string
+                    format: date-time
+                  reportToken:
+                    type: string
+                    description: JWT del reporte (expira en ~1h)
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /documents/analyze-unified:
+    post:
+      tags:
+        - Documentos
+      summary: Análisis unificado (recomendado)
+      description: |
+        Ejecuta **OCR + Face-API + Google Cloud** en una sola llamada.
+
+        - El campo del archivo debe llamarse `document`.
+        - Si una etapa falla (por ejemplo Cloud sin credenciales), el request **no se cae**:
+          la etapa se reporta en `data.forensicAnalysis.stages`.
+      operationId: analyzeDocumentUnified
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+        - ApiKeyQuery: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: Imagen del documento (JPEG, PNG, max 5MB)
+              required:
+                - document
+      responses:
+        '200':
+          description: Análisis unificado completado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: UNIFIED_ANALYSIS_COMPLETE
+                  message:
+                    type: string
+                  engine:
+                    type: string
+                    example: Tesseract.js + Face-API + Google Cloud (Unified)
+                  request_id:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/UnifiedDocumentAnalysis'
+                  timestamp:
+                    type: string
+                    format: date-time
+                  reportToken:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /documents/analyze-free:
+    post:
+      tags:
+        - Documentos
+      summary: Análisis OCR gratuito (Tesseract)
+      description: |
+        Análisis **100% Open Source** con Tesseract.js.
+        Útil para debug o para comparar contra Cloud.
+      operationId: analyzeDocumentFree
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+        - ApiKeyQuery: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: Imagen del documento (JPEG, PNG, max 5MB)
+              required:
+                - document
+      responses:
+        '200':
+          description: Análisis OCR completado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: FREE_ANALYSIS_COMPLETE
+                  message:
+                    type: string
+                  engine:
+                    type: string
+                    example: Tesseract.js OCR (100% GRATUITO - Open Source)
+                  request_id:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DocumentAnalysis'
+                  timestamp:
+                    type: string
+                    format: date-time
+                  reportToken:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /documents/analyze-advanced:
+    post:
+      tags:
+        - Documentos
+      summary: Análisis avanzado (OCR + Face-API + Cloudinary)
+      description: |
+        Pipeline gratuito (dependiendo de configuración) que combina OCR + Face-API + Cloudinary.
+      operationId: analyzeDocumentAdvanced
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+        - ApiKeyQuery: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                  description: Imagen del documento (JPEG, PNG, max 5MB)
+              required:
+                - document
+      responses:
+        '200':
+          description: Análisis avanzado completado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  code:
+                    type: string
+                    example: ADVANCED_ANALYSIS_COMPLETE
+                  message:
+                    type: string
+                  engine:
+                    type: string
+                    example: Tesseract + Face-api.js + Cloudinary (100% GRATUITO)
+                  request_id:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DocumentAnalysis'
+                  timestamp:
+                    type: string
+                    format: date-time
+                  reportToken:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /audits:
     get:
@@ -149,7 +334,9 @@ paths:
       description: Obtener registro de todos los documentos analizados con filtros
       operationId: listAudits
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
+        - ApiKeyQuery: []
       parameters:
         - name: page
           in: query
@@ -188,19 +375,34 @@ paths:
                   status:
                     type: string
                     enum: [success]
+                  code:
+                    type: string
+                    example: AUDITS_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
                   data:
                     type: array
                     items:
                       $ref: '#/components/schemas/AuditRecord'
-                  pagination:
+                  details:
                     type: object
                     properties:
-                      page:
-                        type: integer
-                      limit:
-                        type: integer
-                      total:
-                        type: integer
+                      pagination:
+                        type: object
+                        properties:
+                          page:
+                            type: integer
+                          limit:
+                            type: integer
+                          total:
+                            type: integer
+                          pages:
+                            type: integer
+                  timestamp:
+                    type: string
+                    format: date-time
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -212,7 +414,9 @@ paths:
       description: Obtener reporte detallado de un análisis específico
       operationId: getAuditDetail
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
+        - ApiKeyQuery: []
       parameters:
         - name: id
           in: path
@@ -230,8 +434,18 @@ paths:
                   status:
                     type: string
                     enum: [success]
+                  code:
+                    type: string
+                    example: AUDIT_DETAIL_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
                   data:
                     $ref: '#/components/schemas/AuditRecord'
+                  timestamp:
+                    type: string
+                    format: date-time
         '404':
           $ref: '#/components/responses/NotFoundError'
         '401':
@@ -245,7 +459,9 @@ paths:
       description: Inicia una nueva sesión de verificación de identidad
       operationId: createSession
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
+        - ApiKeyQuery: []
       requestBody:
         required: true
         content:
@@ -275,8 +491,15 @@ paths:
                   code:
                     type: string
                     example: "SESSION_CREATED"
+                  message:
+                    type: string
+                  request_id:
+                    type: string
                   data:
                     $ref: '#/components/schemas/SessionRecord'
+                  timestamp:
+                    type: string
+                    format: date-time
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -289,7 +512,9 @@ paths:
       description: Obtener lista de sesiones con filtros opcionales
       operationId: listSessions
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
+        - ApiKeyQuery: []
       parameters:
         - name: page
           in: query
@@ -321,6 +546,13 @@ paths:
                   status:
                     type: string
                     enum: [success]
+                  code:
+                    type: string
+                    example: SESSIONS_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
                   data:
                     type: array
                     items:
@@ -330,6 +562,9 @@ paths:
                     properties:
                       pagination:
                         type: object
+                  timestamp:
+                    type: string
+                    format: date-time
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -341,7 +576,9 @@ paths:
       description: Obtener información detallada de una sesión específica
       operationId: getSession
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
+        - ApiKeyQuery: []
       parameters:
         - name: id
           in: path
@@ -359,8 +596,18 @@ paths:
                   status:
                     type: string
                     enum: [success]
+                  code:
+                    type: string
+                    example: SESSION_RETRIEVED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
                   data:
                     $ref: '#/components/schemas/SessionRecord'
+                  timestamp:
+                    type: string
+                    format: date-time
         '404':
           $ref: '#/components/responses/NotFoundError'
         '401':
@@ -373,7 +620,9 @@ paths:
       description: Actualizar estado y datos de una sesión
       operationId: updateSession
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
+        - ApiKeyQuery: []
       parameters:
         - name: id
           in: path
@@ -407,8 +656,18 @@ paths:
                   status:
                     type: string
                     enum: [success]
+                  code:
+                    type: string
+                    example: SESSION_UPDATED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
                   data:
                     $ref: '#/components/schemas/SessionRecord'
+                  timestamp:
+                    type: string
+                    format: date-time
         '404':
           $ref: '#/components/responses/NotFoundError'
         '401':
@@ -421,7 +680,9 @@ paths:
       description: Cancela una sesión existente
       operationId: deleteSession
       security:
+        - ApiKeyHeader: []
         - BearerAuth: []
+        - ApiKeyQuery: []
       parameters:
         - name: id
           in: path
@@ -439,6 +700,24 @@ paths:
                   status:
                     type: string
                     enum: [success]
+                  code:
+                    type: string
+                    example: SESSION_CANCELLED
+                  message:
+                    type: string
+                  request_id:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        example: CANCELLED
+                  timestamp:
+                    type: string
+                    format: date-time
         '404':
           $ref: '#/components/responses/NotFoundError'
         '401':
@@ -641,6 +920,11 @@ components:
       type: http
       scheme: bearer
       description: API Key como Bearer token
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API Key en header (usado por el frontend)
     ApiKeyQuery:
       type: apiKey
       in: query
@@ -651,63 +935,105 @@ components:
     DocumentAnalysis:
       type: object
       properties:
+        personalInfo:
+          $ref: '#/components/schemas/PersonalInfo'
+        forensicAnalysis:
+          $ref: '#/components/schemas/ForensicAnalysis'
+
+    PersonalInfo:
+      type: object
+      properties:
         fullName:
           type: string
-          example: "CASTELLÓ HERNÁNDEZ CERÓN BUENO"
-        documentId:
+          example: "EDWIN BENITO"
+        idNumber:
           type: string
-          example: "CAHE690427H"
+          example: "CSHRED06042713H600"
         curp:
           type: string
-          example: "CAHE690427HDFRRCN06"
-        birthDate:
+          example: "CAHE060427HHGSRDA0"
+        documentType:
           type: string
-          format: date
-          example: "27/04/1969"
-        sex:
-          type: string
-          enum: [H, M, "N/A"]
-          example: "H"
-        electionKey:
-          type: string
-          example: "CAHE69042756A"
-        state:
-          type: string
-          example: "DURANGO"
-        issuedDate:
-          type: string
-          format: date
-          example: "12/04/2018"
-        expiryDate:
-          type: string
-          format: date
-          example: "12/04/2028"
-        faceConfidence:
+          example: "CREDENCIAL_INE_MÉXICO"
+        extractionConfidence:
           type: number
           format: float
-          minimum: 0
-          maximum: 1
-          example: 0.97
-        verdict:
-          type: object
-          properties:
-            status:
-              type: string
-              enum: [VERDADERO, FALSO]
-            message:
-              type: string
-            color:
-              type: string
-        documentOrigin:
+          example: 0.9
+
+    Verdict:
+      type: object
+      properties:
+        status:
           type: string
-          example: "OFICIAL"
-        isDigitallyAltered:
+          enum: [VERDADERO, FALSO, SOSPECHOSO]
+        message:
+          type: string
+        color:
+          type: string
+          example: emerald
+
+    ForensicAnalysis:
+      type: object
+      properties:
+        faceDetected:
           type: boolean
         isSpecimen:
           type: boolean
-        engineVersion:
+        isDigitallyAltered:
+          type: boolean
+        verdict:
+          $ref: '#/components/schemas/Verdict'
+      additionalProperties: true
+
+    UnifiedDocumentAnalysis:
+      type: object
+      properties:
+        personalInfo:
+          $ref: '#/components/schemas/PersonalInfo'
+        forensicAnalysis:
+          type: object
+          properties:
+            faceDetected:
+              type: boolean
+            faceConfidence:
+              type: number
+              format: float
+              example: 0.93
+            isSpecimen:
+              type: boolean
+            isDigitallyAltered:
+              type: boolean
+            verdict:
+              $ref: '#/components/schemas/Verdict'
+            stages:
+              type: object
+              properties:
+                ocr:
+                  $ref: '#/components/schemas/StageResult'
+                face_api:
+                  $ref: '#/components/schemas/StageResult'
+                cloud:
+                  $ref: '#/components/schemas/StageResult'
+        engine:
           type: string
-          example: "ForenseID v7.6"
+          example: Tesseract.js + Face-API + Google Cloud (Unified)
+
+    StageResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        result:
+          type: object
+          nullable: true
+        error:
+          type: object
+          nullable: true
+          properties:
+            code:
+              type: string
+            message:
+              type: string
 
     AuditRecord:
       type: object
@@ -723,12 +1049,28 @@ components:
           type: string
         curp:
           type: string
+          nullable: true
         birthDate:
           type: string
+          nullable: true
         sex:
           type: string
+          nullable: true
+        electionKey:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        issuedDate:
+          type: string
+          nullable: true
+        expiryDate:
+          type: string
+          nullable: true
         faceConfidence:
           type: number
+          format: float
         verdictStatus:
           type: string
         verdictMessage:
@@ -739,6 +1081,8 @@ components:
           type: boolean
         isDigitallyAltered:
           type: boolean
+        engineVersion:
+          type: string
 
     SessionRecord:
       type: object
@@ -794,6 +1138,9 @@ components:
                 type: string
               request_id:
                 type: string
+              timestamp:
+                type: string
+                format: date-time
 
     UnauthorizedError:
       description: Requiere autenticación válida
@@ -812,6 +1159,9 @@ components:
                 type: string
               request_id:
                 type: string
+              timestamp:
+                type: string
+                format: date-time
 
     NotFoundError:
       description: Recurso no encontrado
@@ -830,6 +1180,9 @@ components:
                 type: string
               request_id:
                 type: string
+              timestamp:
+                type: string
+                format: date-time
 
     ValidationError:
       description: Error de validación
@@ -850,3 +1203,6 @@ components:
                 type: object
               request_id:
                 type: string
+              timestamp:
+                type: string
+                format: date-time

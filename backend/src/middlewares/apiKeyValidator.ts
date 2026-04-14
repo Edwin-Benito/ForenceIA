@@ -20,6 +20,12 @@ export const validateApiKey = (req: Request, res: Response, next: NextFunction) 
   // Extraer key de diferentes fuentes
   let apiKey: string | null = null;
 
+  // 0. Desde X-API-Key header (compatibilidad con curl/sandbox)
+  const xApiKey = req.headers['x-api-key'];
+  if (typeof xApiKey === 'string' && xApiKey.trim()) {
+    apiKey = xApiKey.trim();
+  }
+
   // 1. Desde Authorization header (Bearer token)
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {

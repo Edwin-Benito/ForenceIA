@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { analyzeDocument } from '../controllers/document.controller.js';
+import { analyzeDocumentAdvanced } from '../controllers/advanced-analysis.controller.js';
+import { analyzeDocumentFree } from '../controllers/free-analysis.controller.js';
+import { analyzeDocumentUnified } from '../controllers/unified-analysis.controller.js';
 
 const router = Router();
 
@@ -25,7 +28,16 @@ const upload = multer({
   }
 });
 
-// Endpoint: POST /documents/analyze
+// Endpoint: POST /documents/analyze (Google Cloud - sin datos simulados)
 router.post('/analyze', upload.single('document'), analyzeDocument);
+
+// Endpoint: POST /documents/analyze-free (Solo Tesseract.js - 100% Gratuito)
+router.post('/analyze-free', upload.single('document'), analyzeDocumentFree);
+
+// Endpoint: POST /documents/analyze-advanced (Tesseract + Face-api + Cloudinary)
+router.post('/analyze-advanced', upload.single('document'), analyzeDocumentAdvanced);
+
+// Endpoint: POST /documents/analyze-unified (OCR + Face-API + Cloud en una sola llamada)
+router.post('/analyze-unified', upload.single('document'), analyzeDocumentUnified);
 
 export default router;
