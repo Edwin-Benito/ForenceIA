@@ -100,25 +100,6 @@ Endpoints adicionales (útiles para debug):
 
 - `GET /api/v1/audits`
 
-## 🧾 Ejemplos con curl
-
-### Análisis unificado (recomendado)
-
-```bash
-curl -X POST \
-  -H "X-API-Key: forenseid_demo_key_2026" \
-  -F "document=@/ruta/imagen.jpg" \
-  http://localhost:4000/api/v1/documents/analyze-unified
-```
-
-### Google Cloud
-
-```bash
-curl -X POST \
-  -H "X-API-Key: forenseid_demo_key_2026" \
-  -F "document=@/ruta/imagen.jpg" \
-  http://localhost:4000/api/v1/documents/analyze
-```
 
 ## 🧩 Respuesta (forma general)
 
@@ -149,47 +130,6 @@ Error:
   "timestamp": "2026-..."
 }
 ```
-
-## ⚙️ Variables de entorno (backend)
-
-Crea `backend/.env` (mínimo recomendado):
-
-```env
-PORT=4000
-JWT_SECRET=dev_secret_change_me
-
-# API key (si no se define, queda habilitada la demo)
-API_KEY=forenseid_demo_key_2026
-
-# (opcional) Override de SQLite
-# DATABASE_URL=/ruta/absoluta/a/dev.db
-```
-
-### Google Cloud (opcional)
-
-Para habilitar `POST /api/v1/documents/analyze` (y el stage cloud del unificado):
-
-```env
-GOOGLE_APPLICATION_CREDENTIALS=/ruta/a/forenseid-xxxxx.json
-GCP_PROJECT_ID=...
-GCP_LOCATION=us
-GCP_PROCESSOR_ID=...
-```
-
-## ☁️ Deploy en Vercel
-
-El repo incluye `vercel.json` con build de backend + frontend.
-
-En producción, los endpoints quedan bajo:
-
-- `https://<tu-app>.vercel.app/api/v1/...`
-- `https://<tu-app>.vercel.app/api-docs`
-
-Configura en Vercel (Environment Variables) al menos:
-
-- `JWT_SECRET`
-- `API_KEY`
-- (si usas GCP) `GOOGLE_APPLICATION_CREDENTIALS`, `GCP_PROJECT_ID`, `GCP_LOCATION`, `GCP_PROCESSOR_ID`
 
 ## 📁 Estructura del proyecto
 
@@ -232,17 +172,6 @@ Configura en Vercel (Environment Variables) al menos:
 }
 ```
 
-## 🧪 Testing
-
-```bash
-# Backend
-cd backend
-npm run test
-
-# Frontend
-cd frontend
-npm run test
-```
 
 ## 📝 API Response Format
 
@@ -271,68 +200,4 @@ Todos los endpoints retornan respuestas estandarizadas:
 }
 ```
 
-## 🔐 Seguridad
 
-- ✅ Validación de API Key en todos los endpoints protegidos
-- ✅ CORS configurado para dominios específicos
-- ✅ Rate limiting (implementar en producción)
-- ✅ Input validation en todos los endpoints
-- ✅ Sanitización de datos antes de guardar
-- ✅ HTTPS en producción
-- ✅ Variables sensibles en .env (no commiteadas)
-
-## 📈 Performance
-
-- Backend: Express.js optimizado con compresión
-- Frontend: Vue 3 con vite build optimization
-- Database: SQLite con índices
-- API: Response caching headers
-- CDN: Vercel Edge Network
-
-## 🐛 Troubleshooting
-
-### Puerto 4000 ya está en uso
-```bash
-# Kill el proceso
-lsof -ti:4000 | xargs kill -9
-```
-
-### Prisma Client no actualizado
-```bash
-# Limpiar y regenerar
-rm -rf node_modules/.prisma
-npx prisma generate
-```
-
-### Frontend no ve la API
-```bash
-# Verificar VITE_API_URL en .env
-cat frontend/.env
-# Debe apuntar a http://localhost:4000/api/v1 en desarrollo
-```
-
-### Google Cloud credentials
-```bash
-# Verificar que el archivo JSON esté en la ruta correcta
-ls -la backend/forenseid-*.json
-```
-
-## 📞 Soporte
-
-- 📧 Email: support@forenseid.mx
-- 🐛 Issues: github.com/yourusername/forenseid/issues
-- 📖 Docs: https://forenseid.mx/docs
-
-## 📄 Licencia
-
-Proprietary License - Todos los derechos reservados © 2026
-
-## 👥 Contribuidores
-
-- **Benito** - Lead Developer
-
----
-
-**Última actualización:** 7 de Abril, 2026
-**Versión:** 1.0.0
-**Estado:** ✅ Producción
